@@ -29,18 +29,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Step 4.1 Check
-    - name: Debug Credentials
-      run: echo "$GMAIL_CREDENTIALS_JSON"
-      env:
-        GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
-
-
     # Step 4: Set up Google Credentials from GitHub Secrets
     - name: Set up Google Credentials
-      run: echo "${{ secrets.GMAIL_CREDENTIALS_JSON }}" > credentials.json
-      env:
-        GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
+      run: echo '${{ secrets.GMAIL_CREDENTIALS_JSON }}' > credentials.json
 
     # Step 5: Train the model
     - name: Train model
@@ -49,6 +40,8 @@ jobs:
 
     # Step 6: Send email notification
     - name: Send email notification
+      env:
+        GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
       run: |
         python scripts/send_email_oauth2.py --subject "Model Training Success" --message "The model training completed successfully."
 
