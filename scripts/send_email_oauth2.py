@@ -2,8 +2,9 @@ import os
 import json
 import base64
 import argparse
-import google.auth
+from email.mime.text import MIMEText  # Add this import for MIMEText
 from google.auth.transport.requests import Request
+from google.auth.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -13,27 +14,39 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
 # Function to authenticate Gmail API using credentials
 def authenticate_gmail_api():
-    credentials_json = os.environ.get('GMAIL_CREDENTIALS_JSON')  # Retrieve the secret
+    # Retrieve the Gmail credentials JSON from environment variable
+    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
+    print("Loaded credentials JSON:", credentials_json)
+    
     if not credentials_json:
         raise ValueError("GMAIL_CREDENTIALS_JSON not found in environment variables.")
     
-    # Authenticate using credentials passed as JSON string
+    # Parse the credentials JSON string into a dictionary
+    try:
+        credentials_dict = json.loads(credentials_json)
+        print("Parsed credentials:", credentials_dict)
+    except json.JSONDecodeError as e:
+        print(f"Error parsing credentials JSON: {e}")
+        raise
+
     creds = None
     try:
-        creds = Credentials.from_authorized_user_info(info=json.loads(credentials_json), scopes=SCOPES)
+        # Try loading the credentials from the provided JSON string
+        creds = Credentials.from_authorized_user_info(info=credentials_dict, scopes=SCOPES)
     except Exception as e:
         print(f"Error loading credentials: {e}")
         raise
     
-    # If credentials are invalid, prompt for re-authentication
+    # If credentials are invalid, re-authenticate
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_config(json.loads(credentials_json), SCOPES)
+            # Use the credentials from client configuration to start OAuth flow
+            flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
             creds = flow.run_local_server(port=0)
         
-        # Save the credentials for future use
+        # Save the credentials for future use in 'credentials.json'
         with open('credentials.json', 'w') as token:
             token.write(creds.to_json())
     
@@ -43,6 +56,7 @@ def authenticate_gmail_api():
 def send_email(subject, message):
     service = authenticate_gmail_api()
     
+    # Replace the sender and recipient with actual email addresses
     message = create_message('khushboo.krishna@gmail.com', 'khushboo.krishna@gmail.com', subject, message)
     send_message(service, 'me', message)
 
