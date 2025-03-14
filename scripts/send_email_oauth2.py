@@ -1,23 +1,31 @@
 import os
-import argparse
 import json
-from google.oauth2.credentials import Credentials
+import base64
+import argparse
+import google.auth
+from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
+from googleapiclient.errors import HttpError
 
-# Define the SCOPES for Gmail API
+# Gmail API scope
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
+# Function to authenticate Gmail API using credentials
 def authenticate_gmail_api():
-    """Authenticate the Gmail API using OAuth2"""
+    credentials_json = os.environ.get('GMAIL_CREDENTIALS_JSON')  # Retrieve the secret
+    if not credentials_json:
+        raise ValueError("GMAIL_CREDENTIALS_JSON not found in environment variables.")
+    
+    # Authenticate using credentials passed as JSON string
     creds = None
-    # Load credentials from environment variable (GMAIL_CREDENTIALS_JSON)
-    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
+    try:
+        creds = Credentials.from_authorized_user_info(info=json.loads(credentials_json), scopes=SCOPES)
+    except Exception as e:
+        print(f"Error loading credentials: {e}")
+        raise
     
-    if credentials_json:
-        creds = Credentials.from_authorized_user_info(json.loads(credentials_json), SCOPES)
-    
+    # If credentials are invalid, prompt for re-authentication
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -25,39 +33,44 @@ def authenticate_gmail_api():
             flow = InstalledAppFlow.from_client_config(json.loads(credentials_json), SCOPES)
             creds = flow.run_local_server(port=0)
         
-        # Save the credentials for the next run
+        # Save the credentials for future use
         with open('credentials.json', 'w') as token:
             token.write(creds.to_json())
     
     return build('gmail', 'v1', credentials=creds)
 
+# Function to send the email
 def send_email(subject, message):
-    """Send email using Gmail API"""
     service = authenticate_gmail_api()
-    message = {
-        'raw': create_message(subject, message)
-    }
-    send_message = service.users().messages().send(userId="me", body=message).execute()
-    print(f"Message Id: {send_message['id']}")
+    
+    message = create_message('khushboo.krishna@gmail.com', 'khushboo.krishna@gmail.com', subject, message)
+    send_message(service, 'me', message)
 
-def create_message(subject, message_body):
-    """Create a message for the email"""
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-    import base64
-
-    message = MIMEMultipart()
-    message['to'] = 'khushboo.krishna@example.com'  # Replace with actual recipient
+# Function to create a message
+def create_message(sender, to, subject, body):
+    message = MIMEText(body)
+    message['to'] = to
+    message['from'] = sender
     message['subject'] = subject
-    message.attach(MIMEText(message_body, 'plain'))
+    
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    return {'raw': raw}
 
-    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    return raw_message
+# Function to send the email
+def send_message(service, sender, message):
+    try:
+        message = service.users().messages().send(userId=sender, body=message).execute()
+        print(f"Message sent successfully: {message}")
+        return message
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+        raise
 
+# Main function to parse arguments and send email
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--subject', help='Subject of the email', required=True)
-    parser.add_argument('--message', help='Body of the email', required=True)
+    parser.add_argument('--message', help='Message body of the email', required=True)
     args = parser.parse_args()
-
+    
     send_email(args.subject, args.message)
