@@ -1,0 +1,36 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main  # This will run the pipeline when there is a push to the `main` branch
+  pull_request:
+    branches:
+      - main  # This will run the pipeline when a pull request is opened against `main`
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8  # Specify the Python version
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run email script
+        run: python scripts/send_email_oauth2.py
+
+      - name: Commit and push changes (if needed)
+        run: |
+          git add .
+          git commit -m "Automated pipeline run"
+          git push origin main
