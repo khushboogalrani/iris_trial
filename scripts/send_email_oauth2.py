@@ -1,60 +1,62 @@
-import os.path
-import base64
-import json
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from google.oauth2.credentials import Credentials
+import os
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+import base64
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import google.auth.transport.requests
 
-# If modifying the email, ensure the scopes match
+# Define the SCOPES for Gmail API
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-# Gmail API Authentication
+# Path to store the token.json (if not using the default location)
+TOKEN_PATH = 'token.json'
+
 def authenticate_gmail_api():
-    creds = None
-    # The file token.json stores the user's access and refresh tokens and is created automatically when the authorization flow completes for the first time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    
-    # If there are no valid credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-    
-    return build('gmail', 'v1', credentials=creds)
+    """Authenticate with Gmail API using OAuth2."""
+    # Get credentials from GitHub Secret
+    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
 
-# Send email using Gmail API
+    if credentials_json is None:
+        print("No credentials JSON found in environment variables.")
+        exit(1)
+    
+    credentials = None
+    # The credentials file will be stored temporarily in the environment
+    with open('credentials.json', 'w') as f:
+        f.write(credentials_json)
+
+    # The flow is used to authenticate and obtain the credentials
+    flow = InstalledAppFlow.from_client_secrets_file(
+        'credentials.json', SCOPES)
+
+    credentials = flow.run_local_server(port=0)
+
+    # Save the credentials for the next run
+    with open(TOKEN_PATH, 'w') as token:
+        token.write(credentials.to_json())
+
+    # Build the Gmail API service
+    service = build('gmail', 'v1', credentials=credentials)
+    return service
+
 def send_email():
-    try:
-        service = authenticate_gmail_api()
+    """Send an email using the Gmail API."""
+    service = authenticate_gmail_api()
 
-        message = MIMEMultipart()
-        message['to'] = "khushboo.krishna@gmail.com"  # Replace with the recipient email
-        message['from'] = "khushboo.krishna@gmail.com"  # Your Gmail address
-        message['subject'] = "Test Email from Gmail API using OAuth 2.0"
-        
-        # The body of the email
-        body = "This is a test email sent from Python using OAuth 2.0 authentication."
-        message.attach(MIMEText(body, 'plain'))
+    # Create the email message
+    message = MIMEMultipart()
+    message['to'] = 'khushboo.krishn@gmai.com'
+    message['subject'] = 'Test Email from GitHub Actions'
 
-        raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    msg = MIMEText('This is a test email sent via GitHub Actions and OAuth2 authentication.')
+    message.attach(msg)
 
-        # Send the email
-        message = service.users().messages().send(userId="me", body={'raw': raw_message}).execute()
-        print(f"Message sent successfully, Message ID: {message['id']}")
-    except HttpError as error:
-        print(f'An error occurred: {error}')
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
 
-# Run the function
-send_email()
+    # Send the email
+    send_message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+    print('Message sent successfully: %s' % send_message['id'])
+
+if __name__ == '__main__':
+    send_email()
