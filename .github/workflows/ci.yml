@@ -29,10 +29,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Debug secret
-      run: echo "$GMAIL_CREDENTIALS_JSON"
-        env:
-          GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
+    # Step 4.1 Check
+    - name: Debug Credentials
+      run: echo ""$GMAIL_CREDENTIALS_JSON"
+      env:
+        GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
+
 
     # Step 4: Set up Google Credentials from GitHub Secrets
     - name: Set up Google Credentials
