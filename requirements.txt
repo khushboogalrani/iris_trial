@@ -1,1 +1,4 @@
-
+scikit-learn==0.24.1
+joblib==1.0.1
+google-cloud-sdk==340.0.0
+sendgrid==6.9.1
