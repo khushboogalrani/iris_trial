@@ -1,17 +1,10 @@
 import os
-import base64
-import logging
 import argparse
-import google.auth
-from google.auth.transport.requests import Request
+import json
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
+from google.auth.transport.requests import Request
 
 # Define the SCOPES for Gmail API
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
@@ -19,15 +12,17 @@ SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 def authenticate_gmail_api():
     """Authenticate the Gmail API using OAuth2"""
     creds = None
-    if os.path.exists('credentials.json'):
-        creds = Credentials.from_authorized_user_file('credentials.json', SCOPES)
+    # Load credentials from environment variable (GMAIL_CREDENTIALS_JSON)
+    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
+    
+    if credentials_json:
+        creds = Credentials.from_authorized_user_info(json.loads(credentials_json), SCOPES)
     
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
+            flow = InstalledAppFlow.from_client_config(json.loads(credentials_json), SCOPES)
             creds = flow.run_local_server(port=0)
         
         # Save the credentials for the next run
@@ -37,27 +32,32 @@ def authenticate_gmail_api():
     return build('gmail', 'v1', credentials=creds)
 
 def send_email(subject, message):
-    """Send an email via Gmail API"""
+    """Send email using Gmail API"""
     service = authenticate_gmail_api()
-    
-    message_obj = MIMEMultipart()
-    message_obj['to'] = 'khushboo.krishna@gmail.com'  # Replace with the recipient email
-    message_obj['subject'] = subject
-    message_obj.attach(MIMEText(message, 'plain'))
+    message = {
+        'raw': create_message(subject, message)
+    }
+    send_message = service.users().messages().send(userId="me", body=message).execute()
+    print(f"Message Id: {send_message['id']}")
 
-    raw_message = base64.urlsafe_b64encode(message_obj.as_bytes()).decode()
-    
-    try:
-        message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
-        logging.info(f"Message sent: {message['id']}")
-    except Exception as error:
-        logging.error(f"An error occurred: {error}")
+def create_message(subject, message_body):
+    """Create a message for the email"""
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    import base64
+
+    message = MIMEMultipart()
+    message['to'] = 'khushboo.krishna@example.com'  # Replace with actual recipient
+    message['subject'] = subject
+    message.attach(MIMEText(message_body, 'plain'))
+
+    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    return raw_message
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Send an email using Gmail API")
-    parser.add_argument('--subject', required=True, help="Subject of the email")
-    parser.add_argument('--message', required=True, help="Message content of the email")
-
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subject', help='Subject of the email', required=True)
+    parser.add_argument('--message', help='Body of the email', required=True)
     args = parser.parse_args()
 
     send_email(args.subject, args.message)
