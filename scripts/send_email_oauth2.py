@@ -4,7 +4,7 @@ import base64
 import argparse
 from email.mime.text import MIMEText  # Add this import for MIMEText
 from google.auth.transport.requests import Request
-from google.auth.oauth2 import Credentials
+from google.oauth2 import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
