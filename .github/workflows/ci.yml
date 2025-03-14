@@ -31,7 +31,7 @@ jobs:
 
     # Step 4.1 Check
     - name: Debug Credentials
-      run: echo ""$GMAIL_CREDENTIALS_JSON"
+      run: echo "$GMAIL_CREDENTIALS_JSON"
       env:
         GMAIL_CREDENTIALS_JSON: ${{ secrets.GMAIL_CREDENTIALS_JSON }}
 
