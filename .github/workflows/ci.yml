@@ -1,41 +1,48 @@
-name: CI Pipeline
+name: Model Training and Email Notification
 
 on:
   push:
     branches:
-      - main  # This will run the pipeline when there is a push to the `main` branch
+      - main
   pull_request:
     branches:
-      - main  # This will run the pipeline when a pull request is opened against `main`
+      - main
 
 jobs:
-  build:
+  train_and_notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    # Step 1: Checkout repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8  # Specify the Python version
-      - name: Install Google Cloud SDK
-        run: |
-          curl https://sdk.cloud.google.com | bash
-          source ~/.bashrc
-          gcloud --version
+    # Step 2: Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.8'
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+    # Step 3: Install dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Run email script
-        run: python scripts/send_email_oauth2.py
+    # Step 4: Set up Google Credentials from Secrets
+    - name: Set up Google Credentials
+      run: echo "${{ secrets.GOOGLE_CREDENTIALS_JSON }}" > credentials.json
 
-      - name: Commit and push changes (if needed)
-        run: |
-          git add .
-          git commit -m "Automated pipeline run"
-          git push origin main
+    # Step 5: Train the model (Replace this with your actual training script)
+    - name: Train model
+      run: |
+        python scripts/train_model.py  # Replace with your model training script
+
+    # Step 6: Send email notification
+    - name: Send email notification
+      run: |
+        python scripts/send_email_oauth2.py --subject "Model Training Success" --message "The model training completed successfully."
+
+    # Step 7: Clean up credentials file
+    - name: Clean up credentials
+      run: rm credentials.json

@@ -1,62 +1,63 @@
 import os
+import base64
+import logging
+import argparse
+import google.auth
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-import base64
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import google.auth.transport.requests
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
 
 # Define the SCOPES for Gmail API
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-# Path to store the token.json (if not using the default location)
-TOKEN_PATH = 'token.json'
-
 def authenticate_gmail_api():
-    """Authenticate with Gmail API using OAuth2."""
-    # Get credentials from GitHub Secret
-    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
-
-    if credentials_json is None:
-        print("No credentials JSON found in environment variables.")
-        exit(1)
+    """Authenticate the Gmail API using OAuth2"""
+    creds = None
+    if os.path.exists('credentials.json'):
+        creds = Credentials.from_authorized_user_file('credentials.json', SCOPES)
     
-    credentials = None
-    # The credentials file will be stored temporarily in the environment
-    with open('credentials.json', 'w') as f:
-        f.write(credentials_json)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        
+        # Save the credentials for the next run
+        with open('credentials.json', 'w') as token:
+            token.write(creds.to_json())
+    
+    return build('gmail', 'v1', credentials=creds)
 
-    # The flow is used to authenticate and obtain the credentials
-    flow = InstalledAppFlow.from_client_secrets_file(
-        'credentials.json', SCOPES)
-
-    credentials = flow.run_local_server(port=0)
-
-    # Save the credentials for the next run
-    with open(TOKEN_PATH, 'w') as token:
-        token.write(credentials.to_json())
-
-    # Build the Gmail API service
-    service = build('gmail', 'v1', credentials=credentials)
-    return service
-
-def send_email():
-    """Send an email using the Gmail API."""
+def send_email(subject, message):
+    """Send an email via Gmail API"""
     service = authenticate_gmail_api()
+    
+    message_obj = MIMEMultipart()
+    message_obj['to'] = 'khushboo.krishna@gmail.com'  # Replace with the recipient email
+    message_obj['subject'] = subject
+    message_obj.attach(MIMEText(message, 'plain'))
 
-    # Create the email message
-    message = MIMEMultipart()
-    message['to'] = 'khushboo.krishn@gmai.com'
-    message['subject'] = 'Test Email from GitHub Actions'
-
-    msg = MIMEText('This is a test email sent via GitHub Actions and OAuth2 authentication.')
-    message.attach(msg)
-
-    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-
-    # Send the email
-    send_message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
-    print('Message sent successfully: %s' % send_message['id'])
+    raw_message = base64.urlsafe_b64encode(message_obj.as_bytes()).decode()
+    
+    try:
+        message = service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
+        logging.info(f"Message sent: {message['id']}")
+    except Exception as error:
+        logging.error(f"An error occurred: {error}")
 
 if __name__ == '__main__':
-    send_email()
+    parser = argparse.ArgumentParser(description="Send an email using Gmail API")
+    parser.add_argument('--subject', required=True, help="Subject of the email")
+    parser.add_argument('--message', required=True, help="Message content of the email")
+
+    args = parser.parse_args()
+
+    send_email(args.subject, args.message)
