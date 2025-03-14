@@ -36,7 +36,7 @@ jobs:
     # Step 5: Train the model (Replace this with your actual training script)
     - name: Train model
       run: |
-        python scripts/train_model.py  # Replace with your model training script
+        python train_model.py  # Replace with your model training script
 
     # Step 6: Send email notification
     - name: Send email notification
