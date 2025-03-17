@@ -15,10 +15,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app3.py .
 
 # Expose port for Streamlit
-EXPOSE 8501
+EXPOSE 8080
 
 # Set environment variables
-ENV STREAMLIT_SERVER_PORT=8501
+ENV STREAMLIT_SERVER_PORT=8080
 ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_SERVER_ENABLE_CORS=false
 
