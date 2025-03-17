@@ -12,6 +12,12 @@ import warnings
 import uuid
 import logging
 import transformers
+import os
+
+# Get API keys from environment variables
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+COHERE_API_KEY = os.environ.get("COHERE_API_KEY")
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", message="Some weights of .* were not initialized")
