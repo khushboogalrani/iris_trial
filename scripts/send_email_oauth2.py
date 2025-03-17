@@ -1,90 +1,71 @@
+import smtplib
 import os
-import json
-import base64
-import argparse
-from email.mime.text import MIMEText  # Add this import for MIMEText
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
 
-# Gmail API scope
-SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-
-# Function to authenticate Gmail API using credentials
-def authenticate_gmail_api():
-    # Retrieve the Gmail credentials JSON from environment variable
-    credentials_json = os.getenv('GMAIL_CREDENTIALS_JSON')
-    print("Loaded credentials JSON:", credentials_json)
+def send_email_notification():
+    """Send email notification about pipeline status"""
+    print("Preparing email notification")
     
-    if not credentials_json:
-        raise ValueError("GMAIL_CREDENTIALS_JSON not found in environment variables.")
-    
-    # Parse the credentials JSON string into a dictionary
     try:
-        credentials_dict = json.loads(credentials_json)
-        print("Parsed credentials:", credentials_dict)
-    except json.JSONDecodeError as e:
-        print(f"Error parsing credentials JSON: {e}")
-        raise
-
-    creds = None
-    try:
-        # Try loading the credentials from the provided JSON string
-        creds = Credentials.from_authorized_user_info(info=credentials_dict, scopes=SCOPES)
-    except Exception as e:
-        print(f"Error loading credentials: {e}")
-        raise
-    
-    # If credentials are invalid, re-authenticate
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            # Use the credentials from client configuration to start OAuth flow
-            flow = InstalledAppFlow.from_client_config(credentials_dict, SCOPES)
-            creds = flow.run_local_server(port=0)
+        # Email configuration
+        sender_email = os.environ.get("EMAIL_ADDRESS")
+        receiver_email = os.environ.get("EMAIL_ADDRESS")
+        app_password = os.environ.get("EMAIL_APP_PASSWORD")
+        job_status = os.environ.get("JOB_STATUS", "Unknown")
         
-        # Save the credentials for future use in 'credentials.json'
-        with open('credentials.json', 'w') as token:
-            token.write(creds.to_json())
-    
-    return build('gmail', 'v1', credentials=creds)
+        if not all([sender_email, receiver_email, app_password]):
+            print("Email credentials not set in environment variables")
+            return False
+        
+        # Get pipeline info from GitHub Actions
+        github_repository = os.environ.get("GITHUB_REPOSITORY", "Unknown")
+        github_workflow = os.environ.get("GITHUB_WORKFLOW", "AskNEU Pipeline")
+        github_run_id = os.environ.get("GITHUB_RUN_ID", "Unknown")
+        github_sha = os.environ.get("GITHUB_SHA", "Unknown")[:7]  # Short SHA
+        
+        # Create email content
+        message = MIMEMultipart()
+        message["From"] = sender_email
+        message["To"] = receiver_email
+        message["Subject"] = f"AskNEU Pipeline Status: {job_status} - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        
+        # Email body
+        body = f"""
+        <html>
+        <body>
+            <h2>AskNEU Pipeline Status Report</h2>
+            <p><b>Status:</b> {job_status}</p>
+            <p><b>Repository:</b> {github_repository}</p>
+            <p><b>Workflow:</b> {github_workflow}</p>
+            <p><b>Run ID:</b> {github_run_id}</p>
+            <p><b>Commit:</b> {github_sha}</p>
+            <p><b>Timestamp:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+            
+            <h3>Pipeline Steps:</h3>
+            <ul>
+                <li><b>Build:</b> {"Completed" if job_status == "success" else "Failed"}</li>
+                <li><b>Deploy:</b> {"Completed" if job_status == "success" else "Failed"}</li>
+            </ul>
+            
+            <p>Please check the GitHub Actions logs for more details.</p>
+        </body>
+        </html>
+        """
+        
+        message.attach(MIMEText(body, "html"))
+        
+        # Send email
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, app_password)
+            server.send_message(message)
+            
+        print("Email notification sent successfully")
+        return True
+    except Exception as e:
+        print(f"Error sending email notification: {str(e)}")
+        return False
 
-# Function to send the email
-def send_email(subject, message):
-    service = authenticate_gmail_api()
-    
-    # Replace the sender and recipient with actual email addresses
-    message = create_message('khushboo.krishna@gmail.com', 'khushboo.krishna@gmail.com', subject, message)
-    send_message(service, 'me', message)
-
-# Function to create a message
-def create_message(sender, to, subject, body):
-    message = MIMEText(body)
-    message['to'] = to
-    message['from'] = sender
-    message['subject'] = subject
-    
-    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    return {'raw': raw}
-
-# Function to send the email
-def send_message(service, sender, message):
-    try:
-        message = service.users().messages().send(userId=sender, body=message).execute()
-        print(f"Message sent successfully: {message}")
-        return message
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-        raise
-
-# Main function to parse arguments and send email
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--subject', help='Subject of the email', required=True)
-    parser.add_argument('--message', help='Message body of the email', required=True)
-    args = parser.parse_args()
-    
-    send_email(args.subject, args.message)
+if __name__ == "__main__":
+    send_email_notification()
