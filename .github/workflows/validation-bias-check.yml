@@ -3,10 +3,10 @@ name: Validation and Bias Check Pipeline
 on:
   push:
     paths:
-      - 'evaluation.py'
-      - 'biasevaluation.py'
-      - 'question.xlsx'
-      - 'bias_question.xlsx'
+      - 'scripts/evaluation.py'
+      - 'scripts/bias_evaluation.py'
+      - 'scripts/question.xlsx'
+      - 'scripts/bias_question.xlsx'
 
   workflow_dispatch:
 
