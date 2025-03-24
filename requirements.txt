@@ -6,3 +6,4 @@ transformers
 torch
 langchain
 pandas
+openpyxl
