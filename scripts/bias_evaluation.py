@@ -135,7 +135,7 @@ def process_excel_file(file_path, client, batch_size=10):
         return None
 
 def main():
-    input_file = "bias_question.xlsx"
+    input_file = "scripts/bias_question.xlsx"
     if not api_key:
         print("Error: OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
         return
