@@ -137,7 +137,7 @@ def process_excel_file(file_path, client, batch_size=10):
 
 def main():
     # Input file path
-    input_file = "scripts/question.xlsx"
+    input_file = "Model Evaluation/question.xlsx"
 
     # Check if API key is available
     if not api_key:

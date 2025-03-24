@@ -3,10 +3,10 @@ name: Validation and Bias Check Pipeline
 on:
   push:
     paths:
-      - 'scripts/evaluation.py'
-      - 'scripts/bias_evaluation.py'
-      - 'scripts/question.xlsx'
-      - 'scripts/bias_question.xlsx'
+      - 'Model Evaluation/evaluation.py'
+      - 'Model Evaluation/bias_evaluation.py'
+      - 'Model Evaluation/question.xlsx'
+      - 'Model Evaluation/bias_question.xlsx'
 
   workflow_dispatch:
 
@@ -31,15 +31,15 @@ jobs:
       - name: Run validation script
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python scripts/evaluation.py
+        run: python Model Evaluation/evaluation.py
 
       - name: Run bias check script
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python scripts/bias_evaluation.py
+        run: python Model Evaluation/bias_evaluation.py
 
       - name: Save results artifact
         uses: actions/upload-artifact@v4
         with:
           name: validation-and-bias-results
-          path: scripts/
+          path: Model Evaluation/
