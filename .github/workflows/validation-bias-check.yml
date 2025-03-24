@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python environment
         uses: actions/setup-python@v4
@@ -35,7 +35,7 @@ jobs:
         run: python scripts/bias_evaluation.py
 
       - name: Save results artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: validation-and-bias-results
           path: validation/
