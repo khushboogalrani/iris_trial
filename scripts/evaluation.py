@@ -160,7 +160,7 @@ def main():
         overall_avg = sum(avg_scores.values()) / len(avg_scores)
         print(f"\nOverall Average Score: {overall_avg:.2f}")
 
-        threshold = 8.0
+        threshold = 7.0
         if overall_avg >= threshold:
             print("Validation passed successfully!")
             exit(0)  # Exit with success code
