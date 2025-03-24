@@ -29,9 +29,13 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run validation script
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python scripts/evaluation.py
 
       - name: Run bias check script
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python scripts/bias_evaluation.py
 
       - name: Save results artifact
