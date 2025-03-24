@@ -52,4 +52,4 @@ jobs:
           EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
           EMAIL_APP_PASSWORD: ${{ secrets.EMAIL_APP_PASSWORD }}
           JOB_STATUS: ${{ job.status }}
-        run: python Model Evaluation/send_email_oauth2.py
+        run: python Modeling Pipeline/Model Evaluation/send_email_oauth2.py
