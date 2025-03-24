@@ -1,12 +1,10 @@
 import pandas as pd
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
 import time
 from tqdm import tqdm
 
-# Load environment variables (API key)
-load_dotenv()
+
 
 # Initialize OpenAI client
 api_key = os.getenv("OPENAI_API_KEY")
